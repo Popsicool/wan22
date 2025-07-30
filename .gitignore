@@ -1,0 +1,5 @@
+/test_resources
+/tests
+4xLSDIR.pth
+sage*
+film_net_fp32.pt
