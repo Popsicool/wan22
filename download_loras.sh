@@ -4,10 +4,16 @@ cd /models/loras || exit 1
 # Function to download a file with proper URL encoding
 download_file() {
   filename="$1"
-  # URL encode the filename for the URL
-  encoded_url=$(echo "$filename" | sed -e "s/ /%20/g")
+  # Check if filename contains spaces or other special characters
+  if [[ "$filename" =~ [^a-zA-Z0-9._-] ]]; then
+    # Encode spaces only (or extend this if needed)
+    encoded_url=$(echo "$filename" | sed -e "s/ /%20/g")
+  else
+    encoded_url="$filename"
+  fi
+
   echo "Downloading $filename..."
-  wget -q -O "$filename" "https://d1s3da0dcaf6kx.cloudfront.net/$encoded_url" || {
+  wget -q --timeout=30 --tries=3 -O "$filename" "https://d1s3da0dcaf6kx.cloudfront.net/$encoded_url" || {
     echo "Failed to download $filename"
     return 1
   }
