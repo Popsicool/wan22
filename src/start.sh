@@ -74,30 +74,6 @@ sync_bot_repo() {
       "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" \
       "$REPO_DIR"
     echo "Clone complete"
-
-    echo "Installing Python deps..."
-    cd "$REPO_DIR"
-    # Add pip requirements installation here if needed
-    cd /
-  else
-    echo "Updating existing repo in $REPO_DIR"
-    cd "$REPO_DIR"
-
-    # Clean up any Python cache files
-    find . -name "*.pyc" -delete 2>/dev/null || true
-    find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-
-    # Then proceed with git operations
-    git fetch origin
-    git checkout "$BRANCH"
-
-    # Try pull, if it fails do hard reset
-    git pull origin "$BRANCH" || {
-      echo "Pull failed, using force reset"
-      git fetch origin "$BRANCH"
-      git reset --hard "origin/$BRANCH"
-    }
-    cd /
   fi
 }
 
