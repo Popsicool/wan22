@@ -88,10 +88,9 @@ RUN git clone https://github.com/Hearmeman24/upscalers.git /tmp/upscalers \
     && cp /tmp/upscalers/4xLSDIR.pth /4xLSDIR.pth \
     && rm -rf /tmp/upscalers
 
-# No LoRAs for now
-# RUN mkdir -p /models/loras
-# COPY download_loras.sh /tmp/
-# RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh
+RUN mkdir -p /models/loras
+COPY download_loras.sh /tmp/
+RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh
 
 
 RUN echo "torch==2.8.0.dev20250511+cu128" > /torch-constraint.txt && \
