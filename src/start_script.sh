@@ -9,7 +9,7 @@ if [ -d "wan22" ]; then
   rm -rf wan22
 fi
 
-echo "📥 Cloning branch '$BRANCH' of ComfyUI-Bot-Wan-Template…"
+echo "📥 Cloning branch '$BRANCH' of Wan22…"
 git clone --branch "$BRANCH" https://github.com/Hearmeman24/wan22.git
 
 echo "📂 Moving start.sh into place…"
