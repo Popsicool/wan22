@@ -1,4 +1,3 @@
-# .circleci/config.yml  (CircleCI 2.1)
 version: 2.1
 
 executors:
@@ -18,20 +17,23 @@ jobs:
       - checkout
 
       - run:
-          name: Log in to Docker Hub
+          name: Log in to Private Registry
           command: |
-            echo "$DOCKERHUB_PAT" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            echo "$REGISTRY_PASSWORD" | docker login registry.hearmemanai.xyz --username "$REGISTRY_USERNAME" --password-stdin
 
       - run:
-          name: Build & push without cache
+          name: Build & push wan22 image
           command: |
-            TAG="${CIRCLE_TAG:-latest}"
-            IMG="docker.io/$DOCKERHUB_USER/comfyui-wan22-bot"
+            # Use the git tag as the Docker image tag
+            TAG="${CIRCLE_TAG}"
+            if [ -z "$TAG" ]; then
+              echo "Error: CIRCLE_TAG is not set. This job should be triggered by a git tag."
+              exit 1
+            fi
 
-            docker build \
-              --progress=plain \
-              --no-cache \
-              -t "${IMG}:${TAG}" .
+            IMG="registry.hearmemanai.xyz/wan22/wan22-bot"
+
+            docker build --progress=plain -t "${IMG}:${TAG}" .
 
             docker push "${IMG}:${TAG}"
 
@@ -43,6 +45,6 @@ workflows:
           context: docker-hub
           filters:
             tags:
-              only: /^v.*$/   # run on tags like v5 or v1.2.3
+              only: /^v[0-9]+(\.[0-9]+)*$/  # matches tags like v1, v2.3, v10.0.1
             branches:
               ignore: /.*/
