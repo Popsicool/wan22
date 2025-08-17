@@ -11,7 +11,6 @@ echo "🔧 Installing KJNodes packages..."
 pip install -r /ComfyUI/custom_nodes/ComfyUI-KJNodes/requirements.txt &
 KJ_PID=$!
 
-if [[ -z "$is_multi_gpu" || "$is_multi_gpu" != "false" ]]; then
 if [[ "${IS_DEV,,}" =~ ^(true|1|t|yes)$ ]]; then
     API_URL="https://comfyui-job-api-dev.fly.dev"  # Replace with your development API URL
     echo "Using development API endpoint"
@@ -23,7 +22,7 @@ fi
 URL="http://127.0.0.1:8188"
 
 # Function to report pod status
-  report_status() {
+report_status() {
     local status=$1
     local details=$2
 
@@ -37,7 +36,9 @@ URL="http://127.0.0.1:8188"
 
     echo "Status reported: $status - $details"
 }
+
 report_status false "Starting initialization"
+
 # Set the network volume path
 # Determine the network volume based on environment
 # Check if /workspace exists
@@ -52,72 +53,77 @@ else
     NETWORK_VOLUME="/"
 fi
 
-
 echo "Using NETWORK_VOLUME: $NETWORK_VOLUME"
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
+
 if [ "${IS_DEV:-false}" = "true" ]; then
     REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot-dev"
     BRANCH="dev"
-  else
+else
     REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot-master"
     BRANCH="master"
 fi
 
-
 sync_bot_repo() {
-  echo "Syncing bot repo (branch: $BRANCH)..."
-  if [ ! -d "$REPO_DIR" ]; then
-    echo "Cloning '$BRANCH' into $REPO_DIR"
-    mkdir -p "$(dirname "$REPO_DIR")"
-    git clone --branch "$BRANCH" \
-      "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" \
-      "$REPO_DIR"
-    echo "Clone complete"
-  fi
+    echo "Syncing bot repo (branch: $BRANCH)..."
+    if [ ! -d "$REPO_DIR" ]; then
+        echo "Cloning '$BRANCH' into $REPO_DIR"
+        mkdir -p "$(dirname "$REPO_DIR")"
+        git clone --branch "$BRANCH" \
+          "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" \
+          "$REPO_DIR"
+        echo "Clone complete"
+    fi
 }
 
 if [ -f "$FLAG_FILE" ] || [ "$new_config" = "true" ]; then
-  echo "FLAG FILE FOUND"
-  mv "/4xLSDIR.pth" "$NETWORK_VOLUME/ComfyUI/models/upscale_models" || echo "Move operation failed, continuing..."
-  rm -rf "$NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-Manager" || echo "Remove operation failed, continuing..."
-  sync_bot_repo
+    echo "FLAG FILE FOUND"
+    mv "/4xLSDIR.pth" "$NETWORK_VOLUME/ComfyUI/models/upscale_models" || echo "Move operation failed, continuing..."
+    rm -rf "$NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-Manager" || echo "Remove operation failed, continuing..."
+    sync_bot_repo
 
-  wait $KJ_PID
-  KJ_STATUS=$?
+    wait $KJ_PID
+    KJ_STATUS=$?
 
-  echo "✅ KJNodes install complete"
+    echo "✅ KJNodes install complete"
 
-  # Check results
-  if [ $KJ_STATUS -ne 0 ]; then
-    echo "❌ KJNodes install failed."
-    exit 1
-  fi
+    # Check results
+    if [ $KJ_STATUS -ne 0 ]; then
+        echo "❌ KJNodes install failed."
+        exit 1
+    fi
 
-  if [ -n "$FILM_PID" ]; then
-    wait $FILM_PID
-    echo "✅ film_net_fp32.pt download complete."
-  fi
+    if [ -n "$FILM_PID" ]; then
+        wait $FILM_PID
+        echo "✅ film_net_fp32.pt download complete."
+    fi
 
-  echo "▶️  Starting ComfyUI"
-  # group both the main and fallback commands so they share the same log
-  mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
-  nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen --use-sage-attention --extra-model-paths-config '/ComfyUI-Bot-Wan-Template/extra_model_paths.yaml' 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
+    echo "▶️  Starting ComfyUI"
+    # group both the main and fallback commands so they share the same log
+    mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
+    nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen --use-sage-attention --extra-model-paths-config '/ComfyUI-Bot-Wan-Template/extra_model_paths.yaml' 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
 
-  until curl --silent --fail "$URL" --output /dev/null; do
-      echo "🔄  Still waiting…"
-      sleep 2
-  done
+    until curl --silent --fail "$URL" --output /dev/null; do
+        echo "🔄  Still waiting…"
+        sleep 2
+    done
 
-  echo "ComfyUI is UP Starting worker"
-  nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
+    echo "ComfyUI is UP Starting worker"
+    nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
 
-  report_status true "Pod fully initialized and ready for processing"
-  echo "Initialization complete! Pod is ready to process jobs."
+    report_status true "Pod fully initialized and ready for processing"
+    echo "Initialization complete! Pod is ready to process jobs."
 
-  # Wait on background jobs forever
-  wait
+    # Wait on background jobs forever
+    wait
 
 else
-  echo "NO FLAG FILE FOUND – starting initial setup"
+    echo "NO FLAG FILE FOUND – starting initial setup"
+    # Add your initial setup logic here
+    echo "Performing initial setup..."
+
+    # Create the flag file to mark initialization as complete
+    touch "$FLAG_FILE"
+    echo "Initial setup complete. Flag file created."
 fi
