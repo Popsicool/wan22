@@ -1,6 +1,8 @@
 #!/bin/bash
 cd /models/loras || exit 1
 
+apt-get update
+apt-get install wget
 # Function to download a file with proper URL encoding
 download_file() {
   filename="$1"
