@@ -129,15 +129,15 @@ load_model_ids() {
     local file="$1"
 
     if [[ ! -f "$file" ]]; then
-        echo "❌ Error: Model IDs file '$file' not found"
-        echo "   Looking for file at: $(realpath "$file" 2>/dev/null || echo "$file")"
-        echo "   Current directory: $(pwd)"
-        echo "   Files in current directory:"
-        ls -la
+        echo "❌ Error: Model IDs file '$file' not found" >&2
+        echo "   Looking for file at: $(realpath "$file" 2>/dev/null || echo "$file")" >&2
+        echo "   Current directory: $(pwd)" >&2
+        echo "   Files in current directory:" >&2
+        ls -la >&2
         exit 1
     fi
 
-    echo "📄 Loading model IDs from: $file"
+    echo "📄 Loading model IDs from: $file" >&2
 
     # Read file and extract numbers, handling various formats
     local -a ids=()
@@ -154,17 +154,17 @@ load_model_ids() {
     done < "$file"
 
     if [[ ${#ids[@]} -eq 0 ]]; then
-        echo "❌ Error: No valid model IDs found in $file"
-        echo "   Expected format: comma-separated or space-separated numbers"
-        echo "   Example: 2091879, 2091870, 2077123"
-        echo "   or one ID per line"
-        echo "   File contents:"
-        cat "$file"
+        echo "❌ Error: No valid model IDs found in $file" >&2
+        echo "   Expected format: comma-separated or space-separated numbers" >&2
+        echo "   Example: 2091879, 2091870, 2077123" >&2
+        echo "   or one ID per line" >&2
+        echo "   File contents:" >&2
+        cat "$file" >&2
         exit 1
     fi
 
-    echo "✅ Loaded ${#ids[@]} model IDs from file"
-    # Output each ID on a separate line for mapfile
+    echo "✅ Loaded ${#ids[@]} model IDs from file" >&2
+    # Output each ID on a separate line for mapfile (to stdout only)
     printf '%s\n' "${ids[@]}"
 }
 
