@@ -1,31 +1,201 @@
 #!/bin/bash
-cd /models/loras || exit 1
 
-apt-get update
-apt-get install wget
-# Function to download a file with proper URL encoding
-download_file() {
-  filename="$1"
-  # Check if filename contains spaces or other special characters
-  if [[ "$filename" =~ [^a-zA-Z0-9._-] ]]; then
-    # Encode spaces only (or extend this if needed)
-    encoded_url=$(echo "$filename" | sed -e "s/ /%20/g")
-  else
-    encoded_url="$filename"
-  fi
+# LoRA Batch Downloader
+# Downloads multiple LoRA models from CivitAI using model version IDs from a file
 
-  echo "Downloading $filename..."
-  wget -q --timeout=30 --tries=3 -O "$filename" "https://d1s3da0dcaf6kx.cloudfront.net/$encoded_url" || {
-    echo "Failed to download $filename"
-    return 1
-  }
-  echo "Successfully downloaded $filename"
-  return 0
+set -e  # Exit on any error
+
+# Configuration
+LORA_DIR="/models/loras"
+DOWNLOAD_SCRIPT="download_with_aria.py"
+
+# Parse command line arguments
+usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options:"
+    echo "  -f, --file FILE     Model IDs file (default: model_version_ids.txt)"
+    echo "  -h, --help          Show this help message"
+    echo ""
+    echo "File format examples:"
+    echo "  Comma-separated: 2091879, 2091870, 2077123"
+    echo "  Space-separated: 2091879 2091870 2077123"
+    echo "  One per line:"
+    echo "    2091879"
+    echo "    2091870"
+    echo "    2077123"
 }
 
-# Download all LoRA files
-download_file "wan2.2-i2v-high-oral-insertion-v1.0.safetensors"
-download_file "wan2.2-i2v-low-oral-insertion-v1.0.safetensors"
+# Default values
+MODEL_IDS_FILE="model_version_ids.txt"
 
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -f|--file)
+            MODEL_IDS_FILE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "❌ Unknown option: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
 
-echo "All LoRA files downloaded successfully"
+# Create directory if it doesn't exist
+mkdir -p "$LORA_DIR"
+cd "$LORA_DIR" || exit 1
+
+echo "📁 Working directory: $(pwd)"
+
+# Download the download script from GitHub if it doesn't exist
+if [[ ! -f "$DOWNLOAD_SCRIPT" ]]; then
+    echo "📥 Downloading $DOWNLOAD_SCRIPT from GitHub..."
+    GITHUB_URL="https://raw.githubusercontent.com/Hearmeman24/CivitAI_Downloader/main/download_with_aria.py"
+
+    if command -v curl &> /dev/null; then
+        curl -L -o "$DOWNLOAD_SCRIPT" "$GITHUB_URL" || {
+            echo "❌ Failed to download $DOWNLOAD_SCRIPT using curl"
+            exit 1
+        }
+    elif command -v wget &> /dev/null; then
+        wget -O "$DOWNLOAD_SCRIPT" "$GITHUB_URL" || {
+            echo "❌ Failed to download $DOWNLOAD_SCRIPT using wget"
+            exit 1
+        }
+    else
+        echo "❌ Error: Neither curl nor wget found. Installing wget..."
+        apt-get update
+        apt-get install -y wget
+        wget -O "$DOWNLOAD_SCRIPT" "$GITHUB_URL" || {
+            echo "❌ Failed to download $DOWNLOAD_SCRIPT"
+            exit 1
+        }
+    fi
+
+    echo "✅ Successfully downloaded $DOWNLOAD_SCRIPT"
+    chmod +x "$DOWNLOAD_SCRIPT"
+else
+    echo "✅ $DOWNLOAD_SCRIPT already exists"
+fi
+
+# Check if Python is available
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Error: python3 not found. Installing..."
+    apt-get update
+    apt-get install -y python3 python3-pip
+fi
+
+# Check if aria2 is available
+if ! command -v aria2c &> /dev/null; then
+    echo "📥 Installing aria2..."
+    apt-get update
+    apt-get install -y aria2
+fi
+
+# Install required Python packages if needed
+echo "📦 Installing Python dependencies..."
+pip3 install requests
+
+# Check if CIVITAI_TOKEN is set
+if [[ -z "$CIVITAI_TOKEN" ]]; then
+    echo "⚠️  Warning: CIVITAI_TOKEN environment variable not set"
+    echo "   Some models may require authentication to download"
+    echo "   Set the token with: export CIVITAI_TOKEN='your_token_here'"
+fi
+
+# Function to download a single model
+download_model() {
+    local model_id="$1"
+    echo ""
+    echo "📥 Downloading model version ID: $model_id"
+
+    if python3 "$DOWNLOAD_SCRIPT" -m "$model_id" -o .; then
+        echo "✅ Successfully downloaded model $model_id"
+        return 0
+    else
+        echo "❌ Failed to download model $model_id"
+        return 1
+    fi
+}
+
+# Function to load model IDs from file
+load_model_ids() {
+    local file="$1"
+    local -a ids=()
+
+    if [[ ! -f "$file" ]]; then
+        echo "❌ Error: Model IDs file '$file' not found"
+        exit 1
+    fi
+
+    echo "📄 Loading model IDs from: $file"
+
+    # Read file and extract numbers, handling various formats
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # Extract all numbers from the line (handles comma-separated, space-separated, etc.)
+        while read -r id; do
+            if [[ "$id" =~ ^[0-9]+$ ]]; then
+                ids+=("$id")
+            fi
+        done < <(echo "$line" | grep -oE '[0-9]+')
+    done < "$file"
+
+    if [[ ${#ids[@]} -eq 0 ]]; then
+        echo "❌ Error: No valid model IDs found in $file"
+        echo "   Expected format: comma-separated or space-separated numbers"
+        echo "   Example: 2091879, 2091870, 2077123"
+        echo "   or one ID per line"
+        exit 1
+    fi
+
+    echo "✅ Loaded ${#ids[@]} model IDs from file"
+    printf '%s\n' "${ids[@]}"
+}
+
+# Default model IDs file
+MODEL_IDS_FILE="${MODEL_IDS_FILE:-model_version_ids.txt}"
+
+# Load model IDs from file
+mapfile -t MODEL_IDS < <(load_model_ids "$MODEL_IDS_FILE")
+
+# Download statistics
+total_models=${#MODEL_IDS[@]}
+successful_downloads=0
+failed_downloads=0
+
+echo "🚀 Starting batch download of $total_models LoRA models..."
+echo "============================================================"
+
+# Download each model
+for model_id in "${MODEL_IDS[@]}"; do
+    if download_model "$model_id"; then
+        ((successful_downloads++))
+    else
+        ((failed_downloads++))
+        echo "   Continuing with next model..."
+    fi
+done
+
+echo ""
+echo "============================================================"
+echo "📊 Download Summary:"
+echo "   Total models: $total_models"
+echo "   Successful: $successful_downloads"
+echo "   Failed: $failed_downloads"
+
+if [[ $failed_downloads -eq 0 ]]; then
+    echo "✅ All LoRA files downloaded successfully!"
+    exit 0
+else
+    echo "⚠️  Some downloads failed. Check the output above for details."
+    exit 1
+fi

@@ -54,6 +54,8 @@ RUN cd /ComfyUI && \
 # ------------------------------------------------------------
 FROM base AS final
 ENV PATH="/opt/venv/bin:$PATH"
+ARG CIVITAI_TOKEN
+ENV CIVITAI_TOKEN=${CIVITAI_TOKEN}
 
 RUN mkdir -p /models/diffusion_models /models/text_encoders /models/vae /models/clip_vision
 
