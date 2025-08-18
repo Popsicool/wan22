@@ -92,8 +92,8 @@ RUN mkdir -p /models/diffusion_models /models/text_encoders /models/vae /models/
 
 RUN mkdir -p /models/loras
 COPY download_loras.sh /tmp/
-COPY model_version_ids.txt /models/loras/
-RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh
+COPY model_version_ids.txt /tmp/
+RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh -f /tmp/model_version_ids.txt
 
 
 RUN echo "torch==2.8.0.dev20250511+cu128" > /torch-constraint.txt && \

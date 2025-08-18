@@ -127,16 +127,20 @@ download_model() {
 # Function to load model IDs from file
 load_model_ids() {
     local file="$1"
-    local -a ids=()
 
     if [[ ! -f "$file" ]]; then
         echo "❌ Error: Model IDs file '$file' not found"
+        echo "   Looking for file at: $(realpath "$file" 2>/dev/null || echo "$file")"
+        echo "   Current directory: $(pwd)"
+        echo "   Files in current directory:"
+        ls -la
         exit 1
     fi
 
     echo "📄 Loading model IDs from: $file"
 
     # Read file and extract numbers, handling various formats
+    local -a ids=()
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip empty lines and comments
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
@@ -154,24 +158,47 @@ load_model_ids() {
         echo "   Expected format: comma-separated or space-separated numbers"
         echo "   Example: 2091879, 2091870, 2077123"
         echo "   or one ID per line"
+        echo "   File contents:"
+        cat "$file"
         exit 1
     fi
 
     echo "✅ Loaded ${#ids[@]} model IDs from file"
+    # Output each ID on a separate line for mapfile
     printf '%s\n' "${ids[@]}"
 }
 
-# Default model IDs file
-MODEL_IDS_FILE="${MODEL_IDS_FILE:-model_version_ids.txt}"
+# Check if the model IDs file exists (look in multiple locations)
+if [[ ! -f "$MODEL_IDS_FILE" ]]; then
+    # Try different possible locations
+    for possible_path in \
+        "$MODEL_IDS_FILE" \
+        "/tmp/$MODEL_IDS_FILE" \
+        "/models/loras/$MODEL_IDS_FILE" \
+        "$(dirname "$0")/$MODEL_IDS_FILE"; do
+
+        if [[ -f "$possible_path" ]]; then
+            MODEL_IDS_FILE="$possible_path"
+            echo "✅ Found model IDs file at: $MODEL_IDS_FILE"
+            break
+        fi
+    done
+fi
 
 # Load model IDs from file
+echo "🔍 Loading model IDs..."
 mapfile -t MODEL_IDS < <(load_model_ids "$MODEL_IDS_FILE")
+
+# Debug: Show loaded IDs
+echo "🔍 Debug: Loaded model IDs:"
+printf '  %s\n' "${MODEL_IDS[@]}"
 
 # Download statistics
 total_models=${#MODEL_IDS[@]}
 successful_downloads=0
 failed_downloads=0
 
+echo ""
 echo "🚀 Starting batch download of $total_models LoRA models..."
 echo "============================================================"
 
