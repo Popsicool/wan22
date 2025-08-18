@@ -112,16 +112,28 @@ fi
 # Function to download a single model
 download_model() {
     local model_id="$1"
+    local max_retries=3
+    local retry_delay=5
+
     echo ""
     echo "📥 Downloading model version ID: $model_id"
 
-    if python3 "$DOWNLOAD_SCRIPT" -m "$model_id" -o .; then
-        echo "✅ Successfully downloaded model $model_id"
-        return 0
-    else
-        echo "❌ Failed to download model $model_id"
-        return 1
-    fi
+    for attempt in $(seq 1 $max_retries); do
+        if python3 "$DOWNLOAD_SCRIPT" -m "$model_id" -o .; then
+            echo "✅ Successfully downloaded model $model_id"
+            return 0
+        else
+            if [[ $attempt -lt $max_retries ]]; then
+                echo "⚠️  Attempt $attempt failed, retrying in ${retry_delay}s..."
+                sleep $retry_delay
+                # Increase delay for next retry
+                retry_delay=$((retry_delay * 2))
+            else
+                echo "❌ Failed to download model $model_id after $max_retries attempts"
+                return 1
+            fi
+        fi
+    done
 }
 
 # Function to load model IDs from file
@@ -209,6 +221,12 @@ for model_id in "${MODEL_IDS[@]}"; do
     else
         ((failed_downloads++))
         echo "   Continuing with next model..."
+    fi
+
+    # Add delay between downloads to avoid rate limiting
+    if [[ $model_id != "${MODEL_IDS[-1]}" ]]; then
+        echo "   Waiting 3s before next download..."
+        sleep 3
     fi
 done
 
