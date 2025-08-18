@@ -92,6 +92,7 @@ RUN git clone https://github.com/Hearmeman24/upscalers.git /tmp/upscalers \
 
 RUN mkdir -p /models/loras
 COPY download_loras.sh /tmp/
+COPY model_version_ids.txt /tmp/
 RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh
 
 
