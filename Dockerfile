@@ -92,7 +92,7 @@ RUN mkdir -p /models/diffusion_models /models/text_encoders /models/vae /models/
 
 RUN mkdir -p /models/loras
 COPY download_loras.sh /tmp/
-COPY model_version_ids.txt /tmp/
+COPY model_version_ids.txt /models/loras/
 RUN chmod +x /tmp/download_loras.sh && /tmp/download_loras.sh
 
 
