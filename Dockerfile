@@ -59,7 +59,7 @@ ENV CIVITAI_TOKEN=${CIVITAI_TOKEN}
 
 RUN mkdir -p /models/diffusion_models /models/text_encoders /models/vae /models/clip_vision
 
- Split diffusion model downloads to avoid 50GB+ layers
+# Split diffusion model downloads to avoid 50GB+ layers
 RUN aria2c -x 16 -s 16 -k 1M -d /models/diffusion_models -o wan2.2_t2v_high_noise_14B_fp16.safetensors \
     https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp16.safetensors
 RUN aria2c -x 16 -s 16 -k 1M -d /models/diffusion_models -o wan2.2_t2v_low_noise_14B_fp16.safetensors \
