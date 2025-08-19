@@ -42,5 +42,6 @@ download_file "SaggyTits_wan22_e25_low.safetensors"
 download_file "SaggyTits_wan22_e20_high.safetensors"
 download_file "huge-titfuck-high.safetensors"
 download_file "huge-titfuck-low.safetensors"
-
+download_file "wan2.2-i2v-high-oral-insertion-v1.0.safetensors"
+download_file "wan2.2-i2v-low-oral-insertion-v1.0.safetensors"
 echo "All LoRA files downloaded successfully"
