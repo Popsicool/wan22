@@ -7,7 +7,7 @@ download_file() {
   # URL encode the filename for the URL
   encoded_url=$(echo "$filename" | sed -e "s/ /%20/g")
   echo "Downloading $filename..."
-  wget -q -O "$filename" "https://d1s3da0dcaf6kx.cloudfront.net/$encoded_url" || {
+  wget -q -O "$filename" "https://d1s3da0dcaf6kx.cloudfront.net/wan22/$encoded_url" || {
     echo "Failed to download $filename"
     return 1
   }
